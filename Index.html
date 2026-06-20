@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="ur">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Mehran Auto Tracker</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;background:#060d1a}
+body{background:linear-gradient(160deg,#060d1a 0%,#0f172a 50%,#060d1a 100%);color:#e2e8f0;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+#app{max-width:440px;margin:0 auto;height:100vh;height:100dvh;display:flex;flex-direction:column;overflow:hidden}
+
+/* HEADER */
+.hdr{background:rgba(6,13,26,0.98);border-bottom:1px solid rgba(255,255,255,0.08);padding:13px 16px 11px;display:flex;align-items:center;gap:10px;flex-shrink:0}
+.hdr-title{font-size:16px;font-weight:700;color:#f1f5f9;flex:1}
+.hdr-badge{padding:4px 10px;border-radius:99px;font-size:11px;font-weight:700;transition:.3s}
+.badge-off{background:rgba(100,116,139,0.2);color:#64748b;border:1px solid rgba(100,116,139,0.3)}
+.badge-ready{background:rgba(59,130,246,0.2);color:#93c5fd;border:1px solid rgba(59,130,246,0.3)}
+.badge-moving{background:rgba(34,197,94,0.2);color:#86efac;border:1px solid rgba(34,197,94,0.3)}
+.badge-paused{background:rgba(251,191,36,0.2);color:#fcd34d;border:1px solid rgba(251,191,36,0.3)}
+
+/* SCROLL */
+.scroll{flex:1;overflow-y:auto;overflow-x:hidden;padding:12px 12px 4px}
+.scroll::-webkit-scrollbar{display:none}
+
+/* PAGES */
+.page{display:none}.page.active{display:block}
+.card{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.09);border-radius:16px;padding:15px;margin-bottom:10px}
+.ctitle{font-size:12px;font-weight:600;color:#64748b;margin-bottom:11px}
+
+/* ===== AUTO STATUS BIG CARD ===== */
+.auto-card{border-radius:20px;padding:20px;margin-bottom:12px;position:relative;overflow:hidden;border:1px solid}
+.auto-off{background:linear-gradient(135deg,rgba(15,23,42,.9),rgba(30,41,59,.9));border-color:rgba(255,255,255,.08)}
+.auto-ready{background:linear-gradient(135deg,rgba(30,58,138,.4),rgba(37,99,235,.2));border-color:rgba(59,130,246,.4)}
+.auto-moving{background:linear-gradient(135deg,rgba(5,46,22,.6),rgba(21,128,61,.3));border-color:rgba(34,197,94,.4)}
+.auto-paused{background:linear-gradient(135deg,rgba(69,26,3,.6),rgba(180,83,9,.3));border-color:rgba(251,191,36,.4)}
+
+.auto-ico{font-size:48px;text-align:center;margin-bottom:10px}
+.auto-status-txt{font-size:18px;font-weight:800;text-align:center;margin-bottom:4px}
+.auto-sub{font-size:12.5px;text-align:center;color:#94a3b8;margin-bottom:16px;line-height:1.5}
+
+/* PULSE RING */
+.pulse-wrap{display:flex;justify-content:center;margin-bottom:16px}
+.pulse-ring{width:80px;height:80px;border-radius:50%;display:flex;align-items:center;justify-content:center;position:relative}
+.pulse-ring::before,.pulse-ring::after{content:'';position:absolute;inset:0;border-radius:50%;animation:none}
+.ring-off{background:rgba(100,116,139,.15);border:3px solid rgba(100,116,139,.3)}
+.ring-ready{background:rgba(59,130,246,.15);border:3px solid rgba(59,130,246,.5)}
+.ring-moving{background:rgba(34,197,94,.15);border:3px solid rgba(34,197,94,.6)}
+.ring-moving::before{border:3px solid rgba(34,197,94,.4);animation:ripple 1.5s infinite}
+.ring-moving::after{border:3px solid rgba(34,197,94,.2);animation:ripple 1.5s .5s infinite}
+.ring-paused{background:rgba(251,191,36,.15);border:3px solid rgba(251,191,36,.5)}
+.ring-ico{font-size:32px;z-index:1}
+
+@keyframes ripple{0%{transform:scale(1);opacity:1}100%{transform:scale(2.2);opacity:0}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* LIVE STATS ROW */
+.live-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.live-stat{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:11px 8px;text-align:center}
+.live-val{font-size:20px;font-weight:800;line-height:1}
+.live-lbl{font-size:10px;color:#475569;margin-top:4px}
+
+/* SPEED METER */
+.spd-card{padding:12px 14px}
+.spd-row{display:flex;justify-content:space-between;font-size:11.5px;color:#64748b;margin-bottom:5px}
+.spd-track{background:rgba(255,255,255,.07);border-radius:99px;height:12px;overflow:hidden}
+.spd-fill{height:12px;border-radius:99px;transition:width .3s,background .3s}
+.spd-marks{display:flex;justify-content:space-between;font-size:9.5px;color:#1e3a5f;margin-top:3px}
+
+/* MAP */
+#mapWrap{border-radius:14px;overflow:hidden;height:200px;border:1px solid rgba(255,255,255,.08);position:relative;background:#0a1628;margin-bottom:10px}
+#mapIframe{width:100%;height:100%;border:none;display:none}
+.map-ph{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:#0a1628}
+.map-ph-ico{font-size:36px}
+.map-ph-txt{font-size:12px;color:#334155;text-align:center;padding:0 20px;line-height:1.6}
+
+/* BUTTONS */
+.btn{width:100%;padding:13px;border-radius:12px;border:none;font-size:14px;font-weight:700;cursor:pointer;transition:.15s;font-family:inherit}
+.btn:active{opacity:.8;transform:scale(.98)}
+.btn-blue{background:linear-gradient(135deg,#3b82f6,#6366f1);color:#fff}
+.btn-red{background:rgba(239,68,68,.18);color:#fca5a5;border:1px solid rgba(239,68,68,.3)}
+.btn-gray{background:rgba(100,116,139,.15);color:#94a3b8;border:1px solid rgba(100,116,139,.3)}
+
+/* AUTO TOGGLE */
+.toggle-wrap{display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);border-radius:14px;padding:14px 16px;margin-bottom:10px}
+.toggle-info{flex:1}
+.toggle-title{font-size:14px;font-weight:700;color:#f1f5f9;margin-bottom:3px}
+.toggle-sub{font-size:11.5px;color:#475569}
+.toggle-sw{width:52px;height:28px;border-radius:99px;border:none;cursor:pointer;position:relative;transition:.3s;flex-shrink:0}
+.toggle-sw::after{content:'';position:absolute;width:22px;height:22px;border-radius:50%;background:#fff;top:3px;left:3px;transition:.3s;box-shadow:0 2px 6px rgba(0,0,0,.4)}
+.sw-off{background:#1e293b}
+.sw-on{background:#22c55e}
+.sw-on::after{left:27px}
+
+/* NOTIF */
+.notif{margin-bottom:10px;padding:10px 13px;border-radius:11px;font-size:12.5px;font-weight:500;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.notif.warn{background:rgba(239,68,68,.14);border:1px solid rgba(239,68,68,.35);color:#fca5a5}
+.notif.svc{background:rgba(251,146,60,.14);border:1px solid rgba(251,146,60,.35);color:#fdba74}
+.nx{background:none;border:none;color:inherit;cursor:pointer;font-size:16px}
+
+/* ROUTE TABLE */
+.rt{width:100%;border-collapse:collapse;font-size:11.5px}
+.rt th{background:rgba(59,130,246,.1);color:#93c5fd;padding:8px 9px;text-align:left;font-weight:600;border-bottom:1px solid rgba(59,130,246,.2)}
+.rt td{padding:8px 9px;border-bottom:1px solid rgba(255,255,255,.04);color:#e2e8f0}
+
+/* FORM */
+.field{margin-bottom:13px}
+.field label{font-size:12px;color:#94a3b8;display:block;margin-bottom:5px}
+.iw{display:flex;align-items:center;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.09);border-radius:10px;overflow:hidden}
+.iw:focus-within{border-color:#3b82f6}
+.iw input{flex:1;background:transparent;border:none;outline:none;color:#f1f5f9;padding:11px 13px;font-size:14px;font-family:inherit;min-width:0}
+.iw input[type=date]{color:#f1f5f9}
+.isuf{padding:0 11px;color:#475569;font-size:11px;white-space:nowrap;flex-shrink:0}
+input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
+.hint{background:rgba(96,165,250,.1);border:1px solid rgba(96,165,250,.2);border-radius:9px;padding:10px 13px;margin-bottom:11px;font-size:12.5px;color:#93c5fd}
+
+/* REPORT TABLE */
+.ttable{width:100%;border-collapse:collapse;font-size:11px}
+.ttable th{background:rgba(59,130,246,.1);color:#93c5fd;padding:8px 7px;text-align:left;font-weight:600;border-bottom:1px solid rgba(59,130,246,.2);white-space:nowrap}
+.ttable td{padding:8px 7px;border-bottom:1px solid rgba(255,255,255,.03);vertical-align:top}
+.ttable tr:nth-child(even) td{background:rgba(255,255,255,.015)}
+.td-km{color:#60a5fa;font-weight:700}.td-cost{color:#34d399;font-weight:600}
+
+/* FUEL HI */
+.hi{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:12px 13px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
+
+/* MONTHLY */
+.mbar{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:12px 14px;margin-bottom:9px}
+.btrack{background:rgba(255,255,255,.07);border-radius:99px;height:7px}
+.bfill2{height:7px;border-radius:99px;background:linear-gradient(90deg,#3b82f6,#a78bfa)}
+
+/* SEG */
+.seg{display:flex;background:rgba(255,255,255,.04);border-radius:10px;padding:3px;margin-bottom:12px;gap:3px}
+.seg-btn{flex:1;padding:7px 2px;border:none;border-radius:8px;background:transparent;color:#475569;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;transition:.2s}
+.seg-btn.active{background:#3b82f6;color:#fff}
+
+/* GAUGE */
+.bw{background:rgba(255,255,255,.08);border-radius:99px;height:8px;margin-bottom:5px}
+.bf{height:8px;border-radius:99px;transition:width .5s,background .3s}
+
+input[type=range]{width:100%;-webkit-appearance:none;height:6px;border-radius:99px;outline:none;cursor:pointer;margin:3px 0}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.5);cursor:pointer}
+
+/* NAV */
+.nav{background:rgba(6,13,26,.98);border-top:1px solid rgba(255,255,255,.07);display:flex;justify-content:space-around;padding:7px 0 12px;flex-shrink:0}
+.nb{background:none;border:none;cursor:pointer;color:#475569;display:flex;flex-direction:column;align-items:center;gap:2px;padding:3px 6px;min-width:50px;transition:color .2s}
+.nb.active{color:#3b82f6}
+.nico{font-size:20px}.nlbl{font-size:10px;font-weight:600}
+.ndot{width:4px;height:4px;border-radius:50%;background:#3b82f6;margin-top:1px}
+
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:10px}
+.sc{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:13px;padding:12px 11px}
+.si{font-size:18px;margin-bottom:5px}.sv{font-size:14px;font-weight:700;margin-bottom:2px}.sl{font-size:11px;color:#475569}
+.svc-row{display:flex;justify-content:space-between;align-items:center;padding:12px 15px;border-radius:13px;margin-bottom:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)}
+.stitle{font-weight:700;font-size:15px;color:#f1f5f9;margin-bottom:11px}
+.empty{text-align:center;color:#475569;padding:30px 0;font-size:13px}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- HEADER -->
+<div class="hdr">
+  <span style="font-size:22px">🚗</span>
+  <div class="hdr-title" style="margin-left:8px">
+    Mehran Auto Tracker
+    <div style="font-size:11px;color:#475569;font-weight:400;margin-top:1px" id="hsub">Odometer: ...</div>
+  </div>
+  <div class="hdr-badge badge-off" id="hBadge">OFF</div>
+</div>
+
+<div class="scroll" id="scroll">
+<div id="notifBox" style="display:none"></div>
+
+<!-- ============ AUTO TAB ============ -->
+<div class="page active" id="p-auto">
+
+  <!-- MAIN AUTO STATUS CARD -->
+  <div class="auto-card auto-off" id="autoCard">
+    <div class="pulse-wrap">
+      <div class="pulse-ring ring-off" id="pulseRing">
+        <div class="ring-ico" id="ringIco">😴</div>
+      </div>
+    </div>
+    <div class="auto-status-txt" id="autoTxt" style="color:#64748b">Auto Tracking Band Hai</div>
+    <div class="auto-sub" id="autoSub">Neeche "Auto Shuru Karein" dabayein<br>Phir phone car mein rakh dein — sab automatic</div>
+
+    <!-- Countdown to auto-save -->
+    <div id="stopCountdown" style="display:none;text-align:center;margin-bottom:12px">
+      <div style="font-size:12px;color:#fcd34d">⏳ Car <span id="cdSecs">30</span> sec se ruki hai...</div>
+      <div style="background:rgba(251,191,36,.15);border-radius:99px;height:4px;margin-top:6px;overflow:hidden">
+        <div id="cdBar" style="height:4px;border-radius:99px;background:#fcd34d;width:100%;transition:width 1s linear"></div>
+      </div>
+    </div>
+
+    <button class="btn btn-blue" id="btnAutoStart" onclick="enableAuto()">📡 Auto Tracking Shuru Karein</button>
+    <div style="margin-top:8px;display:none" id="btnStopWrap">
+      <button class="btn btn-red" onclick="disableAuto()">⏹ Sab Band Karein</button>
+    </div>
+  </div>
+
+  <!-- LIVE STATS -->
+  <div class="live-row">
+    <div class="live-stat">
+      <div class="live-val" id="lKm" style="color:#60a5fa">0.000</div>
+      <div class="live-lbl">km abhi tak</div>
+    </div>
+    <div class="live-stat">
+      <div class="live-val" id="lSpd" style="color:#22c55e">0</div>
+      <div class="live-lbl">km/h speed</div>
+    </div>
+    <div class="live-stat">
+      <div class="live-val" id="lCost" style="color:#a78bfa">0</div>
+      <div class="live-lbl">Rs. kharcha</div>
+    </div>
+  </div>
+
+  <!-- SPEED METER -->
+  <div class="card spd-card">
+    <div class="spd-row">
+      <span>Speed Meter</span>
+      <span id="spdLbl" style="font-weight:700;color:#22c55e">0 km/h · Ruka hua</span>
+    </div>
+    <div class="spd-track"><div class="spd-fill" id="spdFill" style="width:0%;background:#22c55e"></div></div>
+    <div class="spd-marks"><span>0</span><span>30</span><span>60</span><span>90</span><span>120+</span></div>
+  </div>
+
+  <!-- GOOGLE MAP -->
+  <div id="mapWrap">
+    <div class="map-ph" id="mapPh">
+      <div class="map-ph-ico">🗺️</div>
+      <div class="map-ph-txt">Auto tracking shuru karein<br>Location yahan dikhegi</div>
+    </div>
+    <iframe id="mapIframe" allowfullscreen="" loading="lazy"></iframe>
+  </div>
+
+  <!-- ROUTE LOG TABLE -->
+  <div class="card">
+    <div class="ctitle">📍 Live Route Log (Auto Trip)</div>
+    <div id="routeLog"><div class="empty" style="padding:14px;font-size:12px">Auto tracking shuru hone ke baad log yahan dikhega</div></div>
+  </div>
+
+</div>
+
+<!-- ============ HOME TAB ============ -->
+<div class="page" id="p-home">
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+      <div>
+        <div style="font-size:36px;font-weight:800;line-height:1" id="gL">18.0L</div>
+        <div style="font-size:12px;color:#94a3b8;margin-top:3px" id="gP">51% · Theek hai</div>
+        <div style="font-size:12px;color:#475569;margin-top:2px" id="gC">Rs. 5,053 worth</div>
+      </div>
+      <div style="position:relative;width:68px;height:68px;flex-shrink:0">
+        <svg width="68" height="68" viewBox="0 0 68 68" style="position:absolute;top:0;left:0;transform:rotate(-90deg)">
+          <circle cx="34" cy="34" r="28" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="6"/>
+          <circle id="gRing" cx="34" cy="34" r="28" fill="none" stroke="#22c55e" stroke-width="6" stroke-linecap="round" stroke-dasharray="175.9" stroke-dashoffset="86"/>
+        </svg>
+        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:20px">⛽</div>
+      </div>
+    </div>
+    <div class="bw"><div class="bf" id="bF" style="width:51%;background:#22c55e"></div></div>
+    <div style="display:flex;justify-content:space-between;font-size:11px;color:#475569"><span>0L</span><span id="bM" style="font-weight:600;color:#22c55e">18.0L</span><span id="bMax">35L</span></div>
+  </div>
+  <div class="card">
+    <div class="ctitle">⚙️ Petrol Level Set Karein</div>
+    <input type="range" id="slider" min="0" max="35" step="0.5" value="18">
+  </div>
+  <div class="g2">
+    <div class="sc"><div class="si">🛣️</div><div class="sv" id="sRng" style="color:#60a5fa">--</div><div class="sl">Range Baqi</div></div>
+    <div class="sc"><div class="si">💰</div><div class="sv" id="sPrc" style="color:#a78bfa">--</div><div class="sl">Per Liter</div></div>
+    <div class="sc"><div class="si">📊</div><div class="sv" id="sMil" style="color:#34d399">--</div><div class="sl">Avg Mileage</div></div>
+    <div class="sc"><div class="si">🧾</div><div class="sv" id="sTot" style="color:#fb923c">Rs.0</div><div class="sl">Total Kharcha</div></div>
+  </div>
+  <div class="svc-row" id="svcRow">
+    <div>
+      <div style="font-size:11px;color:#475569">Agli Oil Change</div>
+      <div style="font-weight:700;font-size:14px;margin-top:3px" id="svcTxt">-- km baqi</div>
+    </div>
+    <span style="font-size:26px">🔧</span>
+  </div>
+</div>
+
+<!-- ============ REFILL TAB ============ -->
+<div class="page" id="p-refill">
+  <div class="card">
+    <div class="ctitle" style="font-size:14px;color:#f1f5f9">⛽ Petrol Refill Add Karein</div>
+    <div class="field"><label>⛽ Kitne Liter Bharwaye</label><div class="iw"><input type="number" id="rL" placeholder="e.g. 10" inputmode="decimal"><span class="isuf">L</span></div></div>
+    <div class="field"><label>💵 Total Amount</label><div class="iw"><input type="number" id="rA" placeholder="e.g. 2807" inputmode="decimal"><span class="isuf">PKR</span></div></div>
+    <div class="field"><label>🔢 Odometer</label><div class="iw"><input type="number" id="rO" placeholder="Current reading" inputmode="decimal"><span class="isuf">km</span></div></div>
+    <div class="field"><label>📅 Tarikh</label><div class="iw"><input type="date" id="rD" style="flex:1;background:transparent;border:none;outline:none;padding:11px 13px;font-size:14px;color:#f1f5f9;font-family:inherit"></div></div>
+    <div id="rHint" style="display:none" class="hint"></div>
+    <button class="btn btn-blue" onclick="saveRefill()">✅ Refill Save Karein</button>
+  </div>
+</div>
+
+<!-- ============ REPORTS TAB ============ -->
+<div class="page" id="p-rep">
+  <div class="stitle">📊 Reports</div>
+  <div class="seg">
+    <button class="seg-btn active" id="sg-trips" onclick="showSeg('trips')">🚗 Auto Trips</button>
+    <button class="seg-btn" id="sg-fuel" onclick="showSeg('fuel')">⛽ Refills</button>
+    <button class="seg-btn" id="sg-month" onclick="showSeg('month')">📅 Monthly</button>
+  </div>
+  <div id="vw-trips">
+    <div class="g2" style="margin-bottom:10px">
+      <div class="sc"><div class="si">🗺️</div><div class="sv" id="rTrips" style="color:#60a5fa">0</div><div class="sl">Total Trips</div></div>
+      <div class="sc"><div class="si">📏</div><div class="sv" id="rTKm" style="color:#34d399">0 km</div><div class="sl">Total Distance</div></div>
+      <div class="sc"><div class="si">⛽</div><div class="sv" id="rTFuel" style="color:#fb923c">0 L</div><div class="sl">Total Petrol</div></div>
+      <div class="sc"><div class="si">💰</div><div class="sv" id="rTCost" style="color:#a78bfa">Rs.0</div><div class="sl">Total Kharcha</div></div>
+    </div>
+    <div style="overflow-x:auto;border-radius:12px;border:1px solid rgba(255,255,255,.08);margin-bottom:10px">
+      <table class="ttable">
+        <thead><tr><th>#</th><th>Tarikh</th><th>Waqt</th><th>KM</th><th>Petrol</th><th>Rs.</th></tr></thead>
+        <tbody id="tripBody"><tr><td colspan="6" class="empty">Koi auto trip nahi</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+  <div id="vw-fuel" style="display:none"><div id="fuelList"></div></div>
+  <div id="vw-month" style="display:none">
+    <div class="g2" id="mStats" style="margin-bottom:10px"></div>
+    <div id="mBars"></div>
+  </div>
+</div>
+
+<!-- ============ SETTINGS TAB ============ -->
+<div class="page" id="p-set">
+  <div class="card">
+    <div class="ctitle" style="font-size:14px;color:#f1f5f9">⚙️ Car Settings</div>
+    <div class="field"><label>💰 Petrol Rate (Rs./L)</label><div class="iw"><input type="number" id="sP" inputmode="decimal"><span class="isuf">Rs/L</span></div></div>
+    <div class="field"><label>🛣️ Average Mileage</label><div class="iw"><input type="number" id="sM" inputmode="decimal"><span class="isuf">km/L</span></div></div>
+    <div class="field"><label>⛽ Tank Capacity</label><div class="iw"><input type="number" id="sT" inputmode="decimal"><span class="isuf">L</span></div></div>
+    <div class="field"><label>🔧 Service Interval</label><div class="iw"><input type="number" id="sSI" inputmode="decimal"><span class="isuf">km</span></div></div>
+    <div class="field"><label>📍 Last Service Odometer</label><div class="iw"><input type="number" id="sLS" inputmode="decimal"><span class="isuf">km</span></div></div>
+    <div class="field"><label>📟 Current Odometer</label><div class="iw"><input type="number" id="sOdo" inputmode="decimal"><span class="isuf">km</span></div></div>
+    <div class="field">
+      <label>⏳ Auto-save delay (car ruke ke baad)</label>
+      <div class="iw"><input type="number" id="sDelay" inputmode="decimal" placeholder="30"><span class="isuf">seconds</span></div>
+    </div>
+    <button class="btn btn-blue" onclick="saveSet()" style="margin-bottom:10px">✅ Settings Save</button>
+    <button class="btn btn-red" onclick="clearAll()">🗑️ Sab Data Delete</button>
+  </div>
+  <div style="text-align:center;font-size:11px;color:#1e3a5f;padding:8px 0 14px">Mehran Auto Tracker v4.0 · GPS Auto Detection ❤️</div>
+</div>
+
+</div><!-- scroll -->
+
+<nav class="nav">
+  <button class="nb active" onclick="goTab('auto',this)"><span class="nico">📡</span><span class="nlbl">Auto</span><div class="ndot"></div></button>
+  <button class="nb" onclick="goTab('home',this)"><span class="nico">🏠</span><span class="nlbl">Home</span></button>
+  <button class="nb" onclick="goTab('refill',this)"><span class="nico">⛽</span><span class="nlbl">Refill</span></button>
+  <button class="nb" onclick="goTab('rep',this)"><span class="nico">📊</span><span class="nlbl">Reports</span></button>
+  <button class="nb" onclick="goTab('set',this)"><span class="nico">⚙️</span><span class="nlbl">Settings</span></button>
+</nav>
+</div>
+
+<script>
+// ========== STATE ==========
+function defState(){
+  return{
+    fuel:18, odo:45384,
+    cfg:{ price:280.71, mile:12, tank:35, svcInt:5000, lastSvc:43000, stopDelay:30 },
+    hist:[
+      {id:1,date:'2024-06-01',L:10,pL:280.71,km:0,odo:45200},
+      {id:2,date:'2024-06-08',L:8,pL:280.71,km:96,odo:45296},
+      {id:3,date:'2024-06-15',L:12,pL:280.71,km:88,odo:45384}
+    ],
+    trips:[]
+  };
+}
+let S=(()=>{try{const r=localStorage.getItem('mat5');return r?JSON.parse(r):defState()}catch(e){return defState()}})();
+const save=()=>{try{localStorage.setItem('mat5',JSON.stringify(S))}catch(e){}};
+const $=id=>document.getElementById(id);
+const pkr=n=>'Rs.'+Math.round(n).toLocaleString('en-PK');
+const fCol=(f,t)=>f<=5?'#ef4444':f<=(t*.25)?'#fbbf24':'#22c55e';
+const fmt=d=>d.toLocaleDateString('en-PK',{day:'2-digit',month:'short',year:'numeric'});
+const fmtT=d=>d.toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit',hour12:true});
+
+// ========== TABS ==========
+function goTab(name,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nb').forEach(b=>{b.classList.remove('active');const d=b.querySelector('.ndot');if(d)d.remove()});
+  $('p-'+name).classList.add('active');
+  btn.classList.add('active');
+  const d=document.createElement('div');d.className='ndot';btn.appendChild(d);
+  $('scroll').scrollTop=0;
+  if(name==='rep')showSeg('trips');
+  if(name==='set')loadSet();
+  if(name==='refill'){$('rO').placeholder='Current: '+S.odo.toLocaleString();$('rD').value=new Date().toISOString().split('T')[0]}
+  if(name==='home')updateHome();
+}
+
+// ========== HOME ==========
+function updateHome(){
+  const{fuel,odo,cfg,hist}=S;
+  const pct=Math.round((fuel/cfg.tank)*100);
+  const c=fCol(fuel,cfg.tank);
+  const off=(2*Math.PI*28)*(1-pct/100);
+  $('gL').textContent=fuel.toFixed(1)+'L';$('gL').style.color=c;
+  $('gP').textContent=pct+'% · '+(pct<20?'⚠️ Khatam!':pct<50?'Theek hai':'Acha hai ✓');
+  $('gC').textContent=pkr(fuel*cfg.price)+' worth';
+  $('bF').style.width=pct+'%';$('bF').style.background=c;
+  $('bM').textContent=fuel.toFixed(1)+'L';$('bM').style.color=c;$('bMax').textContent=cfg.tank+'L';
+  $('gRing').setAttribute('stroke',c);$('gRing').setAttribute('stroke-dashoffset',off.toFixed(1));
+  const sl=$('slider');sl.max=cfg.tank;sl.value=fuel;
+  sl.style.background=`linear-gradient(to right,${c} ${pct}%,#1e293b ${pct}%)`;
+  $('sRng').textContent=Math.round(fuel*cfg.mile)+' km';
+  $('sPrc').textContent=pkr(cfg.price)+'/L';
+  $('sMil').textContent=cfg.mile+' km/L';
+  const tot=hist.reduce((s,h)=>s+h.L*h.pL,0);
+  $('sTot').textContent=pkr(tot);
+  $('hsub').textContent='Odometer: '+odo.toLocaleString()+' km';
+  const rem=(cfg.lastSvc+cfg.svcInt)-odo;
+  const sr=$('svcRow');
+  if(rem<=0){$('svcTxt').textContent='⚠️ Abhi Service!';sr.style.background='rgba(239,68,68,.12)';sr.style.borderColor='rgba(239,68,68,.3)'}
+  else if(rem<500){$('svcTxt').textContent=rem+' km mein service!';sr.style.background='rgba(251,146,60,.12)';sr.style.borderColor='rgba(251,146,60,.3)'}
+  else{$('svcTxt').textContent=rem.toLocaleString()+' km baqi';sr.style.cssText=''}
+  const nb=$('notifBox');
+  if(fuel<=5){nb.style.display='flex';nb.className='notif warn';nb.innerHTML='<span>⛽ Petrol khatam ho raha! Refill karwayein.</span><button class="nx" onclick="this.parentElement.style.display=\'none\'">✕</button>'}
+  else if(rem>0&&rem<300){nb.style.display='flex';nb.className='notif svc';nb.innerHTML='<span>🔧 Oil change '+rem+' km mein!</span><button class="nx" onclick="this.parentElement.style.display=\'none\'">✕</button>'}
+  else nb.style.display='none';
+}
+$('slider').addEventListener('input',function(){S.fuel=parseFloat(this.value);save();updateHome()});
+
+// ========== AUTO GPS ENGINE ==========
+let watchId=null;
+let autoEnabled=false;
+let tripActive=false;
+
+// Current trip state
+let tripKm=0, tripFuelU=0;
+let prevLat=null, prevLng=null, prevTime=null;
+let tripStart=null, tripStartOdo=0;
+let routeLog=[];
+let lastSpeed=0;
+
+// Stop detection
+let stoppedTimer=null, cdInterval=null;
+let stoppedSince=null;
+const MOVE_SPEED=3;    // km/h to consider moving
+const MIN_DIST=0.008;  // km min segment to count (~8m)
+const MAX_ACC=40;      // accuracy must be < 40m
+let mapShown=false;
+let lastMapUpdate=0;
+
+function setAutoUI(state){
+  // state: off | ready | moving | paused
+  const card=$('autoCard');
+  const ring=$('pulseRing');
+  const ico=$('ringIco');
+  const txt=$('autoTxt');
+  const sub=$('autoSub');
+  const badge=$('hBadge');
+  card.className='auto-card auto-'+state;
+  ring.className='pulse-ring ring-'+state;
+  badge.className='hdr-badge badge-'+state;
+  const configs={
+    off:   {ico:'😴', txt:'Auto Tracking Band Hai',        sub:'Neeche button dabayein aur phone car mein rakhein\nSab kuch automatic hoga',  badge:'OFF',    txtC:'#64748b'},
+    ready: {ico:'📡', txt:'GPS Tayyar Hai — Intezaar Mein', sub:'Car chalana shuru karein\nAutomatically detect ho jaye ga',                   badge:'READY',  txtC:'#93c5fd'},
+    moving:{ico:'🚗', txt:'Car Chal Rahi Hai!',             sub:'GPS se distance track ho raha hai\nRukne par automatically pause ho jaye ga',  badge:'MOVING', txtC:'#86efac'},
+    paused:{ico:'⏸', txt:'Car Ruki Hui Hai',               sub:'Chalana shuru ho ga to phir se track hoga\nZyada der ruki to trip save ho gi',  badge:'PAUSED', txtC:'#fcd34d'},
+  };
+  const cfg=configs[state]||configs.off;
+  ico.textContent=cfg.ico;
+  txt.textContent=cfg.txt; txt.style.color=cfg.txtC;
+  sub.textContent=cfg.sub;
+  badge.textContent=cfg.badge;
+}
+
+function updateSpeedUI(kmh){
+  const c=kmh<MOVE_SPEED?'#ef4444':kmh<40?'#fbbf24':kmh<80?'#22c55e':'#60a5fa';
+  $('lSpd').textContent=kmh; $('lSpd').style.color=c;
+  const lbl=kmh<MOVE_SPEED?'Ruka hua ⏸':kmh<40?'Slow ▶':kmh<80?'Normal ✓':'Fast ⚡';
+  $('spdLbl').textContent=kmh+' km/h · '+lbl; $('spdLbl').style.color=c;
+  $('spdFill').style.width=Math.min(100,(kmh/120)*100)+'%';
+  $('spdFill').style.background=c;
+}
+
+function showMap(lat,lng){
+  if(!mapShown){
+    $('mapIframe').src=`https://maps.google.com/maps?q=${lat},${lng}&z=16&output=embed`;
+    $('mapIframe').style.display='block';
+    $('mapPh').style.display='none';
+    mapShown=true;
+  } else {
+    const now=Date.now();
+    if(now-lastMapUpdate>12000){ // update every 12 sec
+      $('mapIframe').src=`https://maps.google.com/maps?q=${lat},${lng}&z=16&output=embed`;
+      lastMapUpdate=now;
+    }
+  }
+}
+
+function startCountdown(){
+  if(stoppedTimer) return;
+  const delay=S.cfg.stopDelay||30;
+  stoppedSince=Date.now();
+  $('stopCountdown').style.display='block';
+  $('cdSecs').textContent=delay;
+  $('cdBar').style.width='100%';
+  $('cdBar').style.transition='none';
+  setTimeout(()=>{$('cdBar').style.transition='width '+delay+'s linear';$('cdBar').style.width='0%'},50);
+  let remaining=delay;
+  cdInterval=setInterval(()=>{
+    remaining--;
+    $('cdSecs').textContent=remaining;
+    if(remaining<=0){ clearInterval(cdInterval); cdInterval=null; autoSaveTrip(); }
+  },1000);
+  stoppedTimer=setTimeout(()=>{ autoSaveTrip(); }, delay*1000+200);
+}
+
+function cancelCountdown(){
+  if(stoppedTimer){ clearTimeout(stoppedTimer); stoppedTimer=null; }
+  if(cdInterval){ clearInterval(cdInterval); cdInterval=null; }
+  stoppedSince=null;
+  $('stopCountdown').style.display='none';
+}
+
+function autoSaveTrip(){
+  cancelCountdown();
+  if(tripKm<0.05){ tripActive=false; setAutoUI('ready'); return; }
+  const now=new Date();
+  const dur=tripStart?Math.round((now-tripStart)/60000):0;
+  const rec={
+    id:Date.now(),
+    date:fmt(tripStart||now),
+    startTime:tripStart?fmtT(tripStart):'--',
+    endTime:fmtT(now),
+    dur:dur,
+    km:parseFloat(tripKm.toFixed(3)),
+    fuel:parseFloat(tripFuelU.toFixed(3)),
+    cost:Math.round(tripFuelU*S.cfg.price),
+    maxSpeed:routeLog.length?Math.max(...routeLog.map(p=>p.speed)):0,
+    avgSpeed:routeLog.length?Math.round(routeLog.filter(p=>p.moving).reduce((s,p)=>s+p.speed,0)/Math.max(1,routeLog.filter(p=>p.moving).length)):0,
+    startOdo:parseFloat(tripStartOdo.toFixed(1)),
+    endOdo:parseFloat(S.odo.toFixed(1)),
+  };
+  S.trips.unshift(rec);
+  save();
+  tripActive=false; tripKm=0; tripFuelU=0;
+  prevLat=null; prevLng=null; prevTime=null; routeLog=[];
+  tripStart=null;
+  $('lKm').textContent='0.000'; $('lCost').textContent='0'; updateSpeedUI(0);
+  $('routeLog').innerHTML='<div class="empty" style="padding:12px;font-size:12px">Trip save ho gayi! Dobara chalane par naya trip shuru hoga.</div>';
+  setAutoUI('ready');
+  // Show quick toast
+  const t=document.createElement('div');
+  t.style.cssText='position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:rgba(34,197,94,.95);color:#fff;padding:10px 20px;border-radius:99px;font-size:13px;font-weight:700;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.4)';
+  t.textContent='✅ Trip Save! '+rec.km+' km · '+pkr(rec.cost);
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(),4000);
+}
+
+function onGpsPosition(pos){
+  const lat=pos.coords.latitude;
+  const lng=pos.coords.longitude;
+  const acc=pos.coords.accuracy;
+  const rawSpd=pos.coords.speed;
+  const now=new Date();
+
+  let speedKmh=0;
+  if(rawSpd!=null && rawSpd>=0){
+    speedKmh=Math.round(rawSpd*3.6);
+  } else if(prevLat!==null && prevTime!==null){
+    const dtSec=(now-prevTime)/1000;
+    if(dtSec>0 && dtSec<30){
+      const dm=haversine(prevLat,prevLng,lat,lng)*1000;
+      speedKmh=Math.round((dm/dtSec)*3.6);
+    }
+  }
+  speedKmh=Math.min(speedKmh,250);
+  lastSpeed=speedKmh;
+  updateSpeedUI(speedKmh);
+  showMap(lat,lng);
+
+  const goodAcc=acc<MAX_ACC;
+  const isMoving=speedKmh>=MOVE_SPEED && goodAcc;
+
+  if(isMoving){
+    // Cancel any stop countdown
+    cancelCountdown();
+
+    if(!tripActive){
+      // Start new trip
+      tripActive=true;
+      tripStart=now;
+      tripStartOdo=S.odo;
+      tripKm=0; tripFuelU=0; routeLog=[];
+    }
+    setAutoUI('moving');
+
+    if(prevLat!==null){
+      const dist=haversine(prevLat,prevLng,lat,lng);
+      if(dist>=MIN_DIST && dist<2){ // sanity: ignore GPS jumps >2km
+        tripKm=parseFloat((tripKm+dist).toFixed(4));
+        tripFuelU=parseFloat((tripKm/S.cfg.mile).toFixed(4));
+        S.fuel=Math.max(0,parseFloat((S.fuel-dist/S.cfg.mile).toFixed(4)));
+        S.odo=parseFloat((S.odo+dist).toFixed(3));
+        save(); updateHome();
+        $('lKm').textContent=tripKm.toFixed(3);
+        $('lCost').textContent=Math.round(tripFuelU*S.cfg.price).toLocaleString('en-PK');
+      }
+    }
+
+    // Log every ~8 seconds
+    const lastPt=routeLog[routeLog.length-1];
+    const timeSincePt=lastPt?(now-new Date(lastPt._ms))/1000:9999;
+    if(timeSincePt>=8){
+      routeLog.push({_ms:now.getTime(),time:fmtT(now),speed:speedKmh,km:tripKm.toFixed(3),lat:lat.toFixed(5),lng:lng.toFixed(5),moving:true});
+      renderRouteLog();
+    }
+
+  } else {
+    // Stopped or slow
+    if(tripActive){
+      setAutoUI('paused');
+      // Add stopped point to log
+      const lastPt=routeLog[routeLog.length-1];
+      if(!lastPt||lastPt.moving){
+        routeLog.push({_ms:now.getTime(),time:fmtT(now),speed:speedKmh,km:tripKm.toFixed(3),lat:lat.toFixed(5),lng:lng.toFixed(5),moving:false});
+        renderRouteLog();
+      }
+      startCountdown();
+    } else {
+      setAutoUI('ready');
+    }
+  }
+
+  prevLat=lat; prevLng=lng; prevTime=now;
+}
+
+function onGpsError(err){
+  const msgs={1:'GPS permission nahi di. Browser mein Allow karein.',2:'GPS signal nahi. Khuli jagah mein jayein.',3:'GPS timeout. Signal kamzor hai.'};
+  setAutoUI('ready');
+  const t=document.createElement('div');
+  t.style.cssText='position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:rgba(239,68,68,.95);color:#fff;padding:10px 18px;border-radius:99px;font-size:12.5px;font-weight:700;z-index:9999';
+  t.textContent='⚠️ '+(msgs[err.code]||'GPS Error');
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(),5000);
+}
+
+function haversine(la1,ln1,la2,ln2){
+  const R=6371,r=Math.PI/180;
+  const dL=(la2-la1)*r, dN=(ln2-ln1)*r;
+  const a=Math.sin(dL/2)**2+Math.cos(la1*r)*Math.cos(la2*r)*Math.sin(dN/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+function enableAuto(){
+  if(!navigator.geolocation){ alert('GPS support nahi hai. Chrome browser use karein.'); return; }
+  autoEnabled=true;
+  $('btnAutoStart').style.display='none';
+  $('btnStopWrap').style.display='block';
+  setAutoUI('ready');
+  mapShown=false; lastMapUpdate=0;
+  $('mapIframe').style.display='none'; $('mapIframe').src='';
+  $('mapPh').style.display='flex';
+  $('mapPh').innerHTML='<div class="map-ph-ico" style="animation:blink 1s infinite">📡</div><div class="map-ph-txt">GPS signal le raha hai...<br>Car mein rakhein aur chalayein</div>';
+
+  watchId=navigator.geolocation.watchPosition(
+    onGpsPosition, onGpsError,
+    {enableHighAccuracy:true, maximumAge:2000, timeout:30000}
+  );
+}
+
+function disableAuto(){
+  if(watchId!==null){ navigator.geolocation.clearWatch(watchId); watchId=null; }
+  cancelCountdown();
+  if(tripActive && tripKm>0.05) autoSaveTrip();
+  autoEnabled=false; tripActive=false;
+  tripKm=0; tripFuelU=0; prevLat=null; prevLng=null; prevTime=null; routeLog=[];
+  $('btnAutoStart').style.display='block';
+  $('btnStopWrap').style.display='none';
+  setAutoUI('off');
+  $('lKm').textContent='0.000'; $('lCost').textContent='0'; updateSpeedUI(0);
+  $('mapIframe').style.display='none'; $('mapIframe').src='';
+  $('mapPh').style.display='flex';
+  $('mapPh').innerHTML='<div class="map-ph-ico">🗺️</div><div class="map-ph-txt">Auto tracking shuru karein<br>Location yahan dikhegi</div>';
+  $('routeLog').innerHTML='<div class="empty" style="padding:14px;font-size:12px">Auto tracking shuru hone ke baad log yahan dikhega</div>';
+  $('stopCountdown').style.display='none';
+}
+
+function renderRouteLog(){
+  if(!routeLog.length) return;
+  const rows=[...routeLog].reverse().slice(0,12).map(p=>`
+    <tr>
+      <td style="color:#64748b">${p.time}</td>
+      <td style="color:${p.moving?'#22c55e':'#ef4444'}">${p.speed} km/h ${p.moving?'▶':'⏸'}</td>
+      <td style="color:#60a5fa;font-weight:700;text-align:right">${p.km} km</td>
+    </tr>`).join('');
+  $('routeLog').innerHTML=`<table class="rt" style="width:100%"><thead><tr><th>Waqt</th><th>Speed</th><th style="text-align:right">Km</th></tr></thead><tbody>${rows}</tbody></table><div style="font-size:10px;color:#1e3a5f;text-align:center;margin-top:5px">Aakhri ${Math.min(routeLog.length,12)} points</div>`;
+}
+
+// ========== REFILL ==========
+['rL','rA'].forEach(id=>$(id).addEventListener('input',()=>{
+  const l=parseFloat($('rL').value),a=parseFloat($('rA').value);
+  const h=$('rHint');
+  if(l&&a){h.style.display='block';h.textContent=`💡 Rate: Rs.${(a/l).toFixed(2)}/L · Naya Range: ${Math.round((S.fuel+l)*S.cfg.mile)} km`}
+  else h.style.display='none';
+}));
+function saveRefill(){
+  const l=parseFloat($('rL').value),a=parseFloat($('rA').value);
+  if(!l||!a){alert('Liters aur amount zaroor bharein!');return}
+  const odo=parseFloat($('rO').value)||S.odo;
+  const date=$('rD').value||new Date().toISOString().split('T')[0];
+  const lastOdo=S.hist.length?S.hist[S.hist.length-1].odo:odo;
+  S.hist.push({id:Date.now(),date,L:l,pL:a/l,km:Math.max(0,odo-lastOdo),odo});
+  S.fuel=Math.min(S.cfg.tank,S.fuel+l);S.odo=odo;S.cfg.price=a/l;
+  save();updateHome();
+  $('rL').value='';$('rA').value='';$('rO').value='';$('rHint').style.display='none';
+  goTab('auto',document.querySelector('.nb'));
+}
+
+// ========== REPORTS ==========
+function showSeg(name){
+  ['trips','fuel','month'].forEach(n=>{
+    $('vw-'+n).style.display=n===name?'block':'none';
+    $('sg-'+n).classList.toggle('active',n===name);
+  });
+  if(name==='trips')renderTrips();
+  if(name==='fuel')renderFuel();
+  if(name==='month')renderMonthly();
+}
+const MN={'01':'Jan','02':'Feb','03':'Mar','04':'Apr','05':'May','06':'Jun','07':'Jul','08':'Aug','09':'Sep','10':'Oct','11':'Nov','12':'Dec'};
+function renderTrips(){
+  const trips=S.trips||[];
+  const totKm=trips.reduce((s,t)=>s+t.km,0);
+  const totF=trips.reduce((s,t)=>s+t.fuel,0);
+  const totC=trips.reduce((s,t)=>s+t.cost,0);
+  $('rTrips').textContent=trips.length;
+  $('rTKm').textContent=totKm.toFixed(1)+' km';
+  $('rTFuel').textContent=totF.toFixed(2)+' L';
+  $('rTCost').textContent=pkr(totC);
+  if(!trips.length){
+    $('tripBody').innerHTML='<tr><td colspan="6" class="empty" style="padding:20px">Koi auto trip nahi<br><span style="font-size:11px">Auto tab se tracking shuru karein</span></td></tr>';
+    return;
+  }
+  $('tripBody').innerHTML=trips.map((t,i)=>`
+    <tr>
+      <td style="color:#334155;font-size:11px">${trips.length-i}</td>
+      <td>
+        <div style="color:#e2e8f0;font-size:12px;font-weight:600">${t.date}</div>
+        <div style="color:#475569;font-size:10px;margin-top:2px">${t.startOdo.toFixed(0)}→${t.endOdo.toFixed(0)} km</div>
+      </td>
+      <td>
+        <div style="color:#94a3b8;font-size:11.5px">${t.startTime}</div>
+        <div style="color:#475569;font-size:10.5px">→ ${t.endTime}</div>
+        ${t.dur>0?`<div style="color:#334155;font-size:10px">${t.dur} min</div>`:''}
+      </td>
+      <td class="td-km">${t.km.toFixed(3)}<br><span style="font-size:9.5px;color:#1e3a5f;font-weight:400">km</span></td>
+      <td style="color:#fb923c;font-size:12px;font-weight:600">${t.fuel.toFixed(3)}<br><span style="font-size:9.5px;color:#1e3a5f;font-weight:400">L</span></td>
+      <td class="td-cost">${t.cost.toLocaleString('en-PK')}<br><span style="font-size:9.5px;color:#1e3a5f;font-weight:400">Rs.</span></td>
+    </tr>`).join('');
+}
+function renderFuel(){
+  const el=$('fuelList');
+  if(!S.hist.length){el.innerHTML='<div class="empty">Koi refill nahi</div>';return}
+  el.innerHTML=[...S.hist].reverse().map(h=>`
+    <div class="hi">
+      <div><div style="font-weight:600;font-size:13px;color:#e2e8f0">${h.date}</div><div style="font-size:11px;color:#475569;margin-top:3px">${h.L}L · Rs.${h.pL.toFixed(0)}/L · ${h.km>0?h.km+' km':'-'}</div></div>
+      <div><div style="font-weight:700;color:#3b82f6;font-size:13px;text-align:right">${pkr(h.L*h.pL)}</div><div style="font-size:11px;color:#475569;margin-top:2px;text-align:right">${h.odo.toLocaleString()} km</div></div>
+    </div>`).join('');
+}
+function renderMonthly(){
+  const{hist,cfg}=S;
+  const tot=hist.reduce((s,h)=>s+h.L*h.pL,0);
+  const totL=hist.reduce((s,h)=>s+h.L,0);
+  const driven=hist.slice(1).reduce((s,h)=>s+h.km,0);
+  const litD=hist.slice(1).reduce((s,h)=>s+h.L,0);
+  const avg=litD>0?(driven/litD).toFixed(1):cfg.mile;
+  $('mStats').innerHTML=[
+    {l:'Total Refills',v:hist.length,i:'⛽',c:'#60a5fa'},
+    {l:'Total Liters',v:totL.toFixed(1)+'L',i:'🔢',c:'#34d399'},
+    {l:'Total Kharcha',v:pkr(tot),i:'💰',c:'#fb923c'},
+    {l:'Avg Mileage',v:avg+' km/L',i:'📈',c:'#a78bfa'},
+  ].map(s=>`<div class="sc"><div class="si">${s.i}</div><div class="sv" style="color:${s.c}">${s.v}</div><div class="sl">${s.l}</div></div>`).join('');
+  const m={};
+  hist.forEach(h=>{const k=h.date.slice(0,7);if(!m[k])m[k]={L:0,cost:0};m[k].L+=h.L;m[k].cost+=h.L*h.pL});
+  const arr=Object.entries(m).reverse();
+  const mx=Math.max(...arr.map(([,v])=>v.cost),1);
+  $('mBars').innerHTML=arr.length?arr.map(([mo,v])=>{
+    const[yr,mn]=mo.split('-');const pct=Math.round(v.cost/mx*100);
+    return`<div class="mbar"><div style="display:flex;justify-content:space-between;margin-bottom:7px"><span style="font-size:13px;font-weight:600">${MN[mn]||mn} ${yr}</span><span style="font-size:13px;font-weight:700;color:#3b82f6">${pkr(v.cost)}</span></div><div class="btrack"><div class="bfill2" style="width:${pct}%"></div></div><div style="font-size:11px;color:#475569;margin-top:5px">${v.L.toFixed(1)} liter use hua</div></div>`;
+  }).join(''):'<div class="empty">Data nahi hai</div>';
+}
+
+// ========== SETTINGS ==========
+function loadSet(){
+  const c=S.cfg;
+  $('sP').value=c.price;$('sM').value=c.mile;$('sT').value=c.tank;
+  $('sSI').value=c.svcInt;$('sLS').value=c.lastSvc;$('sOdo').value=S.odo;
+  $('sDelay').value=c.stopDelay||30;
+}
+function saveSet(){
+  const g=id=>parseFloat($(id).value);
+  S.cfg.price=g('sP')||S.cfg.price;S.cfg.mile=g('sM')||S.cfg.mile;
+  S.cfg.tank=g('sT')||S.cfg.tank;S.cfg.svcInt=g('sSI')||S.cfg.svcInt;
+  S.cfg.lastSvc=g('sLS')||S.cfg.lastSvc;S.odo=g('sOdo')||S.odo;
+  S.cfg.stopDelay=g('sDelay')||30;
+  save();updateHome();alert('✅ Settings save ho gayi!');
+}
+function clearAll(){
+  if(confirm('Sab data delete karna chahte hain?\nTrips aur fuel history sab chala jayega.')){
+    if(autoEnabled)disableAuto();
+    S=defState();save();updateHome();alert('Delete ho gaya.');
+  }
+}
+
+// ========== INIT ==========
+updateHome();
+</script>
+</body>
+</html>
